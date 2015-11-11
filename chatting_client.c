@@ -51,4 +51,7 @@ void error_handling(char *message)
 	exit(1);
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3da043ea331381e75c282c38c3814e3cf8662354
