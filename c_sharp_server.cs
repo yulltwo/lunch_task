@@ -1,130 +1,118 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Threading;
 using System.Linq;
 using System.Text;
+using System.Windows.Forms;
 using System.Net.Sockets;
-using System.Threading;
-using System.Net;
 using System.Diagnostics;
+using System.IO.Ports;
+using System.Threading.Tasks;
 namespace bingo
 {
-    public class Server
+    public partial class Form1 : Form
     {
-        public Socket mServer = null;
-        public Socket mClient = null;
-        public Thread threadListen = null;
-        public Thread threadServ = null;
-        byte[] byte_data = new byte[1024];
-        String string_data = null;
-
-
-
-        static Boolean listening_flag = true;
-        public event IntStringEventHandler Chatting;
-
-        public Server(int port_num) //server
+        public delegate void IntStringEventHandler(UserType type, String buff);       // 델리게이트 선언
+        public static UserType Iam, You;
+        Server mSocketComm = null;
+        public Form1()
         {
-            IPHostEntry host = Dns.GetHostEntry(Dns.GetHostName());
+            InitializeComponent();
+        }
 
-            string strIP = "192.168.0.57";
-
-
-
-            foreach (IPAddress item in host.AddressList)
-            {
-                string[] tempHosts = item.ToString().Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-                if (tempHosts == null || tempHosts.Length != 4) continue;
-                int tempValue = 0;
-                if (int.TryParse(tempHosts[0], out tempValue))
-                {
-                    strIP = item.ToString();
-                    break;
-                }
-            }
-            IPAddress hostIP = IPAddress.Parse(strIP);
-            IPEndPoint ep = new IPEndPoint(hostIP, port_num);
-
-            mServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            mServer.Bind(ep);
-            mServer.Blocking = true;
-
-            threadServ = new Thread(new ThreadStart(ServerProc));
-            threadServ.Start();
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
 
         }
-        
-         public Server(String IP_addr, int Port_num)  //client
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            IPEndPoint ep = new IPEndPoint(IPAddress.Parse(IP_addr), Port_num);
 
-            mServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        }
 
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (mSocketComm != null)
+            {
+                if (mSocketComm.mServer.Connected == true)
+                {
+                    mSocketComm.mServer.Shutdown(SocketShutdown.Both);
+                }
+                mSocketComm.mServer.Close();
+
+                if (mSocketComm.threadServ != null && mSocketComm.threadServ.IsAlive)
+                    mSocketComm.threadServ.Abort();
+               
+            }
             try
             {
-                mServer.Connect(ep);
+                ((IDisposable)this).Dispose();
             }
-            catch (SocketException e)
+            catch
             {
-                Debug.WriteLine("{0}, {1}", "SocketComm_Clnt :", e);
-                return;
             }
-            mClient = mServer;
+            Thread.ResetAbort();
+            GC.SuppressFinalize(this);
 
-            threadListen = new Thread(new ThreadStart(ListenProc));
-            threadListen.Start();
         }
-         
-        public void ServerProc()
+        void Proxy_Chatting(UserType type, String buff)
         {
-            while (true)
+            this.Invoke(new IntStringEventHandler(Chatting), type, buff);
+        }
+        void Chatting(UserType type, String buff)
+        {
+            if (type == UserType.None)
             {
-                mServer.Listen(5);
 
+            }
+            else
+            {
+                if (type == UserType.Server)
+                {
+                   // S_RX.AppendText("Server : " + buff);
+
+                }
+                else if (type == UserType.Client)
+                {
+                    //tb_chat.AppendText("Client : ");
+                }
+            }
+
+        }
+
+        private void server_connect_btn_Click_1(object sender, EventArgs e)
+        {
+            Iam = UserType.Server;
+            You = UserType.Client;
+
+            if (Iam == UserType.Server)
+            {
+                String IP_adress = "127.0.0.1";
+                int port_num = 8888;
                 try
                 {
-                    mClient = mServer.Accept();
-                    Program.mf.S_RX.AppendText(mClient.RemoteEndPoint.ToString() + "\n");
+                    IP_adress = server_ip_tb.Text;
+                    port_num = int.Parse(server_port_tb.Text);
                 }
-                catch (SocketException)
-                {
-                    return;
-                }
+                catch { }
+                server_port_tb.Text = "" + port_num;
 
-                threadListen = new Thread(new ThreadStart(ListenProc));
-                threadListen.Start();
+                mSocketComm = new Server(IP_adress, port_num);
+                server_connect_btn.Enabled = false;
+                mSocketComm.Chatting += new intStringEventHandler(Proxy_Chatting);
             }
         }
-        public void SendData(byte[] buff)
-        {
-            if (mClient != null && mClient.Connected == true)
-            {
-                Chatting(Form1.Iam, Encoding.UTF8.GetString(buff));
-                mClient.Send(buff);
-            }
-            return;
-        }
-        public void ListenProc()
-        {
-            while (listening_flag)
-            {
-                int recv;
-                try
-                {
-                    recv = mClient.Receive(byte_data);
-                }
-                catch (Exception)
-                {
-                    return;
-                }
-                if (recv > 1)
-                {
-                    //string_data = Encoding.ASCII.GetString(byte_data, 0, recv);
-                    string_data = Encoding.UTF8.GetString(byte_data, 0, recv);
-                    Chatting(Form1.You, string_data);
-                }
-            }
-            return;
-        }
+
+
+    }
+    public enum UserType
+    {
+        None = 0x00,
+
+        Server = 0xAA,
+        Client = 0x55
     }
 }
