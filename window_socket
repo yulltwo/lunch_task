@@ -1,0 +1,52 @@
+
+int main(int argc, char *argv[])
+{
+	WSADATA wsaData;
+	SOCKET hSocket;
+	char opmsg[BUF_SIZE];
+	int result, opndCnt,i;
+	SOCKADDR_IN servAdr;
+	char port[4];
+	char message[1024];
+	int strLen;
+	
+	if (argc != 3){
+		printf("Usage : %s <IP> <PORT> \n", argv[0]);
+		exit(1);
+	}
+	
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+		ErrorHandling("WSAStartup() error!");
+
+	hSocket = socket(PF_INET, SOCK_STREAM, 0);
+	if (hSocket == INVALID_SOCKET)
+		ErrorHandling("socket() error!");
+
+	memset(&servAdr, 0, sizeof(servAdr));
+	servAdr.sin_family = AF_INET;
+	servAdr.sin_addr.s_addr = inet_addr(argv[1]);
+
+	memset(message, '\0', sizeof(message));
+
+
+	servAdr.sin_port = htons(atoi(argv[2]));
+	printf("%s   %s", argv[1], argv[2]);
+	if (connect(hSocket, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
+		ErrorHandling("connect error()");
+	else
+		puts("connected...");
+	while (1)
+	{
+		fgets(message, sizeof(message), stdin);
+		strLen = recv(hSocket, message, sizeof(message)-1, 0);
+		message[strLen] = 0;
+		printf("message from server : %s", message);
+		
+	}
+
+
+	closesocket(hSocket);
+	WSACleanup();
+	return 0;
+	
+}
