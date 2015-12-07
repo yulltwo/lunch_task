@@ -1,288 +1,176 @@
-#define _CRT_SECURE_NO_WARNINGS
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Threading;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.Net.Sockets;
+using System.Diagnostics;
+using System.IO.Ports;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <windows.h>
-
-#define MAX 5
-#define WHITE 15
-#define YELLOW 14
-
-
-void textcolor(int color_number); // 텍스트 칼라 출력
-void gotoxy(int x, int y); // 좌표 이동
-int baserand(int x, int y); // 랜덤 범위 지정
-
-// 초기값 설정
-void InitCount(int Player[MAX][MAX], int Com[MAX][MAX]);
-
-// MAP 설정
-void MixMAP(int Player[MAX][MAX]);
-int SearchMAP(int Player[MAX][MAX], int Num);
-void printMAP(int Player[MAX][MAX]);
-int CheckMAP(int Player[MAX][MAX]);
-
-// 승리조건
-void Winner(int flag, int Player[MAX][MAX], int Com[MAX][MAX]);
-
-
-
-
-int main(void) {
-
-	int Player[MAX][MAX];
-	int Com[MAX][MAX];
-	int playerChk, comChk;
-	int Num;
-
-	InitCount(Player, Com);
-
-	MixMAP(Player);
-
-	while (1) {
-		gotoxy(0, 0);
-
-		// 컴퓨터들 출력
-		textcolor(WHITE);
-		printf(" ====== Player ====== \n");
-		printMAP(Player);
-		textcolor(WHITE);
-		printf(" ===== Computer ===== \n");
-		printMAP(Com);
-
-		textcolor(WHITE);
-		printf(" > ");
-		scanf("%d", &Num);
-
-		if (SearchMAP(Player, Num) == 0) {
-			printf("잘못입력하셨습니다. \n");
-			system("pause");
-			system("cls");
-			continue;
-		}
-
-		SearchMAP(Com, Num);
-
-		// 컴퓨터 턴
-		while (1) {
-			Num = baserand(1, MAX*MAX);
-			if (SearchMAP(Com, Num) == 1) {
-				SearchMAP(Player, Num);
-				break;
-			}
-		}
-
-		playerChk = CheckMAP(Player);
-		comChk = CheckMAP(Com);
-
-		printf("Player Check = %d \n", playerChk);
-		printf("Com Check = %d \n", comChk);
-
-		if (playerChk >= MAX && comChk >= MAX) {
-			if (playerChk > comChk) {
-				Winner(0, Player, Com); // 내가 이겼을 때
-			}
-			else if (playerChk < comChk) {
-				Winner(1, Player, Com); // 내가 졌을 때
-			}
-			else {
-				Winner(2, Player, Com); // 배겼을 때
-			}
-		}
-		else  if (playerChk >= MAX) {
-			Winner(0, Player, Com); // 내가 이겼을 때
-		}
-		else  if (comChk >= MAX) {
-			Winner(1, Player, Com); // 내가 졌을 때
-		}
-
-		system("pause");
-		system("cls");
-	}
-	return 0;
-}
-
-// 텍스트 칼라 출력
-void textcolor(int color_number)
+namespace jimin_heartbeat
 {
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color_number);
-};
-// 좌표 이동
-void gotoxy(int x, int y)
-{
-	COORD Cur;
-	Cur.X = x;
-	Cur.Y = y;
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
-}
-// 랜덤 범위 지정
-int baserand(int x, int y) {
+    public delegate void IntStringEventHandler(UserType type, String buff);
+    public partial class Form1 : Form
+    {
 
-	static int z = 0;
-	int tmp;
-	if (z == 0) {
-		srand((int)time(NULL));
-		rand(); rand(); rand(); rand();
-		srand(rand());
-		z = 1;
-	}
+        public int Heart_range_up = 65;
+        public int Heart_range_down = 62;
+        public static UserType Iam, You;
+        Server mSocketComm = null;
+        public Form1()
+        {
+            InitializeComponent();
+        }
 
-	tmp = rand() % (y - x + 1) + x;
-	return tmp;
-}
+        private void heart_up_Click(object sender, EventArgs e)
+        {
+            String msg = "up";
+            mSocketComm.SendData(System.Text.Encoding.UTF8.GetBytes(msg));
+        }
 
-void printMAP(int Player[MAX][MAX]) {
-	int i, j;
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == 0) {
-				textcolor(YELLOW);
-				printf("%4s", "♥");
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (mSocketComm != null)
+            {
+                if (mSocketComm.mServer.Connected == true)
+                {
+                    mSocketComm.mServer.Shutdown(SocketShutdown.Both);
+                }
+                mSocketComm.mServer.Close();
 
-			}
-			else {
-				textcolor(WHITE);
-				printf("%4d", Player[i][j]);
-			}
-		}
-		printf("\n");
-	}
-}
+                if (mSocketComm.threadServ != null && mSocketComm.threadServ.IsAlive)
+                    mSocketComm.threadServ.Abort();
+
+            }
+            try
+            {
+                ((IDisposable)this).Dispose();
+            }
+            catch
+            {
+            }
+            Thread.ResetAbort();
+            GC.SuppressFinalize(this);
+        }
 
 
-void MixMAP(int Player[MAX][MAX]) {
 
-	int i;
-	int x1, y1;
-	int x2, y2;
-	int tmp;
+        private void server_connect_btn_Click(object sender, EventArgs e)
+        {
+            Iam = UserType.Server;
+            You = UserType.Client;
 
-	printMAP(Player);
+            if (Iam == UserType.Server)
+            {
+                String IP_adress = "192.168.0.12";
+                int port_num = 8888;
+                try
+                {
+                    IP_adress = IP_box.Text;
+                    port_num = int.Parse(PORT_BOX.Text);
+                }
+                catch { }
+                PORT_BOX.Text = "" + port_num;
 
-	for (i = 0; i< 10 * MAX; i++) {
+                mSocketComm = new Server(IP_adress, port_num);
+                server_connect_btn.Enabled = false;
+                mSocketComm.Chatting += new IntStringEventHandler(Proxy_Chatting);
+            }
+        }
 
-		x1 = baserand(0, MAX - 1);
-		y1 = baserand(0, MAX - 1);
+        void Proxy_Chatting(UserType type, String buff)
+        {
+            this.Invoke(new IntStringEventHandler(Chatting), type, buff);
+        }
+        void Chatting(UserType type, String buff)
+        {
+            if (type == UserType.None)
+            {
 
-		x2 = baserand(0, MAX - 1);
-		y2 = baserand(0, MAX - 1);
+            }
+            else
+            {
+                if (type == UserType.Server)
+                {
 
-		// 두 값을 서로 바꾸는 코드
-		tmp = Player[x1][y1];
-		Player[x1][y1] = Player[x2][y2];
-		Player[x2][y2] = tmp;
+                }
+                else if (type == UserType.Client)
+                {
+                    if (buff[0] == '+')
+                    {
+                    menulist.AppendText(buff);
+                    }
+                    else { 
+                    rx_box.AppendText(buff);
+                    }
+                }
+            }
 
-		gotoxy(0, 0);
-		printMAP(Player);
+        }
 
-		Sleep(10);
-	}
-	system("pause");
-	system("cls");
+       
+        private void tx_send_btn_Click(object sender, EventArgs e)
+        {
+            mSocketComm.SendData(System.Text.Encoding.UTF8.GetBytes(name.Text+" : "+tx_send_box.Text+". \n"));
+            tx_box.AppendText("I said : "+tx_send_box.Text+" \n");
+            tx_send_box.Text = "";
+        }
 
-}
+        private void bingo_btn_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process ps = new System.Diagnostics.Process();
+            ps.StartInfo.FileName = "bingo.c.exe";
+            ps.StartInfo.WorkingDirectory = "/obj/Debug";
+            ps.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
+            ps.Start();
+        }
 
-int SearchMAP(int Player[MAX][MAX], int Num) {
+        private void sadari_btn_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process ps = new System.Diagnostics.Process();
+            ps.StartInfo.FileName = "sadarigame.exe";
+            ps.StartInfo.WorkingDirectory = "/obj/Debug";
+            ps.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
+            ps.Start();
+        }
 
-	int i, j;
-	int flag = 0;
+        private void bingo_1vs1_btn_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process ps = new System.Diagnostics.Process();
+            ps.StartInfo.FileName = "bingo1vs1.exe";
+            ps.StartInfo.WorkingDirectory = "/obj/Debug";
+            ps.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
+            ps.Start();
+        }
 
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == Num) {
-				flag = 1;
-				Player[i][j] = 0;
-			}
-		}
-	}
+        private void select_menu_Click(object sender, EventArgs e)
+        {
+          //  menulist.AppendText(menu_tbx.Text+ "\n");
+            mSocketComm.SendData(System.Text.Encoding.UTF8.GetBytes("+"+name.Text + ":" + menu_tbx.Text + "\n"));
+        }
 
-	return flag;
-}
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
 
-int CheckMAP(int Player[MAX][MAX]) {
-	int i, j;
-	int rowsFlag = 0;
-	int columnFlag = 0;
-	int crossleftFlag = 0;
-	int crossrightFlag = 0;
-	int check = 0;
+        }
 
-	for (i = 0; i<MAX; i++) {
-		rowsFlag = 0;
-		columnFlag = 0;
+        private void Form1_Load(object sender, EventArgs e)
+        {
+           pictureBox1.Image = Image.FromFile("lunch.jpg");
+        }
+    }
+    public enum UserType
+    {
+        None = 0x00,
 
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == 0) {
-				rowsFlag++;
-			}
-			if (Player[j][i] == 0) {
-				columnFlag++;
-			}
-		}
-		// 가로체크
-		if (rowsFlag == MAX) {
-			check++;
-		}
-		// 세로체크
-		if (columnFlag == MAX) {
-			check++;
-		}
-		// 대각선 왼쪽에서 오른쪽
-		if (Player[i][i] == 0) {
-			crossleftFlag++;
-		}
-		// 대각선 오른쪽에서 왼쪽
-		if (Player[MAX - 1 - i][i] == 0) {
-			crossrightFlag++;
-		}
-	}
-
-	if (crossleftFlag == MAX) {
-		check++;
-	}
-
-	if (crossrightFlag == MAX) {
-		check++;
-	}
-
-	return check;
-}
-
-void Winner(int flag, int Player[MAX][MAX], int Com[MAX][MAX]) {
-	gotoxy(0, 0);
-	textcolor(WHITE);
-	printf(" ====== Player ====== \n");
-	printMAP(Player);
-	textcolor(WHITE);
-	printf(" ===== Computer ===== \n");
-	printMAP(Com);
-	gotoxy(0, MAX * 2 + 5);
-	switch (flag) {
-	case 0:
-		printf("당신이 이겼습니다. \n");
-		break;
-	case 1:
-		printf("당신이 졌습니다. \n");
-		break;
-	case 2:
-		printf("비겼습니다. \n");
-		break;
-	}
-	while (1);
-}
-
-void InitCount(int Player[MAX][MAX], int Com[MAX][MAX]) {
-
-	int i, j;
-	int count = 1;
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			Player[i][j] = count;
-			Com[i][j] = count;
-			count++;
-		}
-	}
+        Server = 0xAA,
+        Client = 0x55
+    }
 }
