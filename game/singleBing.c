@@ -25,8 +25,6 @@ int CheckMAP(int Player[MAX][MAX]);
 void Winner(int flag, int Player[MAX][MAX], int Com[MAX][MAX]);
 
 
-
-
 int main(void) {
 
 	int Player[MAX][MAX];
