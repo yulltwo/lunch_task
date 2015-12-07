@@ -7,7 +7,6 @@
 #define WHITE 15
 #define YELLOW 14
 
-
 void textcolor(int color_number); // 텍스트 칼라 출력
 void gotoxy(int x, int y); // 좌표 이동
 int baserand(int x, int y); // 랜덤 범위 지정
