@@ -1,282 +1,203 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <windows.h>
-
-#define MAX 5
-#define WHITE 15
-#define YELLOW 14
-
-void textcolor(int color_number); // 텍스트 칼라 출력
-void gotoxy(int x, int y); // 좌표 이동
-int baserand(int x, int y); // 랜덤 범위 지정
-
-							// 초기값 설정
-void InitCount(int Player[MAX][MAX], int Com[MAX][MAX]);
-
-// MAP 설정
-void MixMAP(int Player[MAX][MAX]);
-int SearchMAP(int Player[MAX][MAX], int Num);
-void printMAP(int Player[MAX][MAX]);
-int CheckMAP(int Player[MAX][MAX]);
-
-// 승리조건
-void Winner(int flag, int Player[MAX][MAX], int Com[MAX][MAX]);
 
 
-int main(void) {
+int print(int **p);
+void game_start(int ans, int **p, int **p1, int *t);
+void insert(int **p, int *p1);
 
-	int Player[MAX][MAX];
-	int Com[MAX][MAX];
-	int playerChk, comChk;
-	int Num;
 
-	InitCount(Player, Com);
+main()
+{
 
-	MixMAP(Player);
+	int **ptr, **ptr2, *p_ptr;
+	int ans;
+	int i, flag, flag1;
 
-	while (1) {
-		gotoxy(0, 0);
+	srand((unsigned)time(NULL));
+	//Binggo No.1
+	ptr = (int **)malloc(sizeof(int *) * 7);
+	ptr[0] = (int *)malloc(sizeof(int) * 49);
+	//Binggo No.2
+	ptr2 = (int **)malloc(sizeof(int *) * 7);
+	ptr2[0] = (int *)malloc(sizeof(int) * 49);
 
-		// 컴퓨터들 출력
-		textcolor(WHITE);
-		printf(" ====== Player ====== \n");
-		printMAP(Player);
-		textcolor(WHITE);
-		printf(" ===== Computer ===== \n");
-		printMAP(Com);
+	// Not Same Number
+	p_ptr = (int *)malloc(sizeof(int) * 25);
 
-		textcolor(WHITE);
-		printf(" > ");
-		scanf("%d", &Num);
+	// 2D array
+	for (i = 0; i < 7; i++)
+	{
+		ptr[i] = ptr[0] + 7 * i;
+		ptr2[i] = ptr2[0] + 7 * i;
+	}
 
-		if (SearchMAP(Player, Num) == 0) {
-			printf("잘못입력하셨습니다. \n");
-			system("pause");
+	// random number
+	insert(ptr, p_ptr);
+	insert(ptr2, p_ptr);
+
+	do
+	{
+
+		for (i = 0; i <2; i++)
+		{
 			system("cls");
-			continue;
+			printf("No.1 Binggo \n");
+			flag = print(ptr);
+
+			printf("\n\n");
+			printf("No.2 Binggo\n");
+			flag1 = print(ptr2);
+
+			printf("\n");
+
+			if (flag == 0 && flag1 == 0)
+			{
+				printf("No.%d, Choice Number :", i + 1);
+				scanf("%d", &ans);
+				fflush(stdin);
+				if (ans < 1 || ans >25)
+				{
+					printf(" Inpput Number 1~25 \n");
+					getchar();
+					i--;
+				}
+				else
+				{
+					game_start(ans, ptr, ptr2, &i);
+				}
+
+			}
+			else if (flag == 1)
+			{
+				printf("No.1 Win\n");
+				exit(0);
+			}
+			else
+			{
+				printf("No.2 Win\n");
+				exit(0);
+			}
+
+
 		}
 
-		SearchMAP(Com, Num);
+	} while (1);
+}
 
-		// 컴퓨터 턴
-		while (1) {
-			Num = baserand(1, MAX*MAX);
-			if (SearchMAP(Com, Num) == 1) {
-				SearchMAP(Player, Num);
-				break;
+
+void game_start(int ans, int **p, int **p1, int *t)
+{
+	int i, j, cnt = 0;
+	for (i = 1; i < 6; i++)
+	{
+
+		for (j = 1; j < 6; j++)
+		{
+			// ***
+			if (ans == p[i][j])
+			{
+				p[i][j] = 42;
+				// binggo count 
+				p[6][j]++;
+				p[i][6]++;
+				if (i == j)
+					p[6][0]++;
+				if (i + j == 6)
+					p[0][6]++;
+
+				cnt++;
+			}
+			// *** 
+			if (ans == p1[i][j])
+			{
+				p1[i][j] = 42;
+				// binggo count 
+				p1[6][j]++;
+				p1[i][6]++;
+				if (i == j)
+					p1[6][0]++;
+				if (i + j == 6)
+					p1[0][6]++;
+				cnt++;
 			}
 		}
+	}
+	if (cnt == 0)
+	{
+		printf("Do Reselect\n");
+		--*t;
+		getchar();
+		return;
+	}
+}
 
-		playerChk = CheckMAP(Player);
-		comChk = CheckMAP(Com);
 
-		printf("Player Check = %d \n", playerChk);
-		printf("Com Check = %d \n", comChk);
+//input Number 1~25 
+void insert(int **p, int *p1)
+{
+	int i, j, r;
 
-		if (playerChk >= MAX && comChk >= MAX) {
-			if (playerChk > comChk) {
-				Winner(0, Player, Com); // 내가 이겼을 때
-			}
-			else if (playerChk < comChk) {
-				Winner(1, Player, Com); // 내가 졌을 때
-			}
-			else {
-				Winner(2, Player, Com); // 배겼을 때
+
+	for (i = 0; i < 25; i++)
+	{
+		p1[i] = 0;
+	}
+
+	for (i = 0; i < 49; i++)
+		p[0][i] = 0;
+
+
+	for (i = 1; i<6; i++)
+	{
+		for (j = 1; j < 6;)
+		{
+			r = rand() % 25;
+			p[i][j] = r + 1;
+			if (p1[r] < 1)
+			{
+				p1[r]++;
+				j++;
 			}
 		}
-		else  if (playerChk >= MAX) {
-			Winner(0, Player, Com); // 내가 이겼을 때
-		}
-		else  if (comChk >= MAX) {
-			Winner(1, Player, Com); // 내가 졌을 때
-		}
+	}
+}
 
-		system("pause");
-		system("cls");
+// print screen
+int print(int **p)
+{
+	int i, j, k = 0;
+
+	for (i = 1; i<6; i++)
+	{
+		for (j = 1; j < 6; j++)
+		{
+			if (p[i][j] == 42)
+			{
+				printf("[%2c] ", p[i][j]);
+			}
+			else
+				printf("[%2d] ", p[i][j]);
+		}
+		printf("\n");
+	}
+	// Binggo Counter
+	for (i = 0; i < 7; i++)
+	{
+		if (p[6][i] == 5)
+			k++;
+		if (p[i][6] == 5)
+			k++;
+	}
+
+	printf("bingo count = %d ", k);
+
+	if (k == 5)
+	{
+		printf("\nYou Win!!");
+		return 1;
 	}
 	return 0;
 }
 
-// 텍스트 칼라 출력
-void textcolor(int color_number)
-{
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color_number);
-};
-// 좌표 이동
-void gotoxy(int x, int y)
-{
-	COORD Cur;
-	Cur.X = x;
-	Cur.Y = y;
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
-}
-// 랜덤 범위 지정
-int baserand(int x, int y) {
-
-	static int z = 0;
-	int tmp;
-	if (z == 0) {
-		srand((int)time(NULL));
-		rand(); rand(); rand(); rand();
-		srand(rand());
-		z = 1;
-	}
-
-	tmp = rand() % (y - x + 1) + x;
-	return tmp;
-}
-
-void printMAP(int Player[MAX][MAX]) {
-	int i, j;
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == 0) {
-				textcolor(YELLOW);
-				printf("%4s", "♥");
-
-			}
-			else {
-				textcolor(WHITE);
-				printf("%4d", Player[i][j]);
-			}
-		}
-		printf("\n");
-	}
-}
-
-
-void MixMAP(int Player[MAX][MAX]) {
-
-	int i;
-	int x1, y1;
-	int x2, y2;
-	int tmp;
-
-	printMAP(Player);
-
-	for (i = 0; i< 10 * MAX; i++) {
-
-		x1 = baserand(0, MAX - 1);
-		y1 = baserand(0, MAX - 1);
-
-		x2 = baserand(0, MAX - 1);
-		y2 = baserand(0, MAX - 1);
-
-		// 두 값을 서로 바꾸는 코드
-		tmp = Player[x1][y1];
-		Player[x1][y1] = Player[x2][y2];
-		Player[x2][y2] = tmp;
-
-		gotoxy(0, 0);
-		printMAP(Player);
-
-		Sleep(10);
-	}
-	system("pause");
-	system("cls");
-
-}
-
-int SearchMAP(int Player[MAX][MAX], int Num) {
-
-	int i, j;
-	int flag = 0;
-
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == Num) {
-				flag = 1;
-				Player[i][j] = 0;
-			}
-		}
-	}
-
-	return flag;
-}
-
-int CheckMAP(int Player[MAX][MAX]) {
-	int i, j;
-	int rowsFlag = 0;
-	int columnFlag = 0;
-	int crossleftFlag = 0;
-	int crossrightFlag = 0;
-	int check = 0;
-
-	for (i = 0; i<MAX; i++) {
-		rowsFlag = 0;
-		columnFlag = 0;
-
-		for (j = 0; j<MAX; j++) {
-			if (Player[i][j] == 0) {
-				rowsFlag++;
-			}
-			if (Player[j][i] == 0) {
-				columnFlag++;
-			}
-		}
-		// 가로체크
-		if (rowsFlag == MAX) {
-			check++;
-		}
-		// 세로체크
-		if (columnFlag == MAX) {
-			check++;
-		}
-		// 대각선 왼쪽에서 오른쪽
-		if (Player[i][i] == 0) {
-			crossleftFlag++;
-		}
-		// 대각선 오른쪽에서 왼쪽
-		if (Player[MAX - 1 - i][i] == 0) {
-			crossrightFlag++;
-		}
-	}
-
-	if (crossleftFlag == MAX) {
-		check++;
-	}
-
-	if (crossrightFlag == MAX) {
-		check++;
-	}
-
-	return check;
-}
-
-void Winner(int flag, int Player[MAX][MAX], int Com[MAX][MAX]) {
-	gotoxy(0, 0);
-	textcolor(WHITE);
-	printf(" ====== Player ====== \n");
-	printMAP(Player);
-	textcolor(WHITE);
-	printf(" ===== Computer ===== \n");
-	printMAP(Com);
-	gotoxy(0, MAX * 2 + 5);
-	switch (flag) {
-	case 0:
-		printf("당신이 이겼습니다. \n");
-		break;
-	case 1:
-		printf("당신이 졌습니다. \n");
-		break;
-	case 2:
-		printf("비겼습니다. \n");
-		break;
-	}
-	exit(0);
-
-}
-
-void InitCount(int Player[MAX][MAX], int Com[MAX][MAX]) {
-
-	int i, j;
-	int count = 1;
-	for (i = 0; i<MAX; i++) {
-		for (j = 0; j<MAX; j++) {
-			Player[i][j] = count;
-			Com[i][j] = count;
-			count++;
-		}
-	}
-}
