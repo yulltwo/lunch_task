@@ -2,12 +2,15 @@
 #include <stdlib.h>
 #include <time.h>
 
+
 int print(int **p);
 void game_start(int ans, int **p, int **p1, int *t);
 void insert(int **p, int *p1);
 
+
 main()
 {
+
 	int **ptr, **ptr2, *p_ptr;
 	int ans;
 	int i, flag, flag1;
@@ -36,6 +39,7 @@ main()
 
 	do
 	{
+
 		for (i = 0; i <2; i++)
 		{
 			system("cls");
@@ -76,9 +80,11 @@ main()
 				printf("2번이 이겼네... 추카해...\n");
 				exit(0);
 			}
+
+
 		}
-	} 
-	while (1);
+
+	} while (1);
 }
 
 //숫자 입력 해서 배열값 바꾸는 함수. 
@@ -87,6 +93,7 @@ void game_start(int ans, int **p, int **p1, int *t)
 	int i, j, cnt = 0;
 	for (i = 1; i < 6; i++)
 	{
+
 		for (j = 1; j < 6; j++)
 		{
 			// 입력한 값을 별표로 수정... 
