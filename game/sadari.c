@@ -160,5 +160,4 @@ void LadderStart(int MAP[20][MAX], int Select) {
 	textcolor(WHITE);
 	gotoxy(0, 22);
 	printf("%d 번 당첨 \n", (x / 4) + 1);
-  while(1);
 }
